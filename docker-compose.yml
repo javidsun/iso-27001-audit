@@ -1,0 +1,6 @@
+services:
+  iso-audit-backend:
+    container_name: iso-audit-backend
+    image: nginx:alpine
+    ports:
+      - "8081:81"
