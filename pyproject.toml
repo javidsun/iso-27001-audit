@@ -1,0 +1,66 @@
+# ==========================================================
+# ISO-27001-AUDIT - Python project config (PEP 621)
+# This file is the SINGLE source of truth for dependencies.
+# ==========================================================
+
+[project]
+name = "iso-27001-audit"              # Project name (can contain '-')
+version = "0.1.0"
+description = "ISO 27001 audit backend (FastAPI)"
+requires-python = ">=3.13"
+
+# Runtime dependencies (installed in Docker + local)
+dependencies = [
+  "fastapi==0.133.1",
+  "uvicorn[standard]==0.41.0",
+  "pydantic>=2.6",
+  "python-dotenv>=1.0",
+  "httpx>=0.27"
+]
+
+[project.optional-dependencies]
+# Development-only dependencies (lint, tests, type-checking)
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+  "mypy>=1.8"
+]
+
+# ----------------------------------------------------------
+# Tooling configs
+# ----------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py313"              # Align with Python 3.13
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+
+# ----------------------------------------------------------
+# Build system (required for: `pip install .`)
+# ----------------------------------------------------------
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# ----------------------------------------------------------
+# setuptools configuration: tell it where packages live
+# We use the "src layout": packages are inside ./src
+# ----------------------------------------------------------
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

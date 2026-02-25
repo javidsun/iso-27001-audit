@@ -1,6 +1,17 @@
 services:
   iso-audit-backend:
+    # Friendly fixed name for the container
     container_name: iso-audit-backend
-    image: nginx:alpine
+
+    # Build the image from the local Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Map host port -> container port
     ports:
-      - "8081:81"
+      - "8003:8003"
+
+    # Environment variables available inside the container
+    environment:
+      - APP_ENV=dev
