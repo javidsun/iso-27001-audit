@@ -1,17 +1,53 @@
+version: "3.9"
+
 services:
+
+  # ==========================================================
+  # PostgreSQL Database
+  # ==========================================================
+  iso-audit-db:
+    container_name: iso-audit-db
+    image: postgres:16-alpine
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: iso_user
+      POSTGRES_DB: iso_audit
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+    ports:
+      - "5433:5432"   # Host 5433 -> Container 5432
+
+    volumes:
+      - iso_audit_pgdata:/var/lib/postgresql/data
+
+  # ==========================================================
+  # FastAPI Backend
+  # ==========================================================
   iso-audit-backend:
-    # Friendly fixed name for the container
     container_name: iso-audit-backend
 
-    # Build the image from the local Dockerfile
     build:
       context: .
       dockerfile: Dockerfile
 
-    # Map host port -> container port
+    depends_on:
+      - iso-audit-db
+
     ports:
       - "8003:8003"
 
-    # Environment variables available inside the container
     environment:
-      - APP_ENV=dev
+      APP_ENV: dev
+
+      # Database connection settings
+      DB_HOST: iso-audit-db
+      DB_PORT: 5432
+      DB_NAME: iso_audit
+      DB_USER: iso_user
+
+    restart: unless-stopped
+
+volumes:
+  iso_audit_pgdata:
