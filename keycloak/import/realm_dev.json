@@ -1,0 +1,14 @@
+{
+  "realm": "iso-audit",
+  "enabled": true,
+  "users": [
+    {
+      "username": "javid",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "Javid123!", "temporary": false }
+      ]
+    }
+  ]
+}

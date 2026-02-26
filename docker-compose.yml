@@ -52,7 +52,6 @@ services:
 
     restart: unless-stopped
 
-    # Healthcheck (versionato) — cambia URL se la tua route è diversa
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8003/api/v1/health >/dev/null || exit 1"]
       interval: 100s
@@ -71,17 +70,16 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
 
-    # IMPORTANT: deve combaciare con KC_DB_USERNAME/KC_DB_PASSWORD
     environment:
-      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
-      POSTGRES_USER: ${KEYCLOAK_DB_USER:-admin_audit}
-      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-admin123}
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: admin_audit
+      POSTGRES_PASSWORD: admin123
 
     volumes:
       - keycloak_pgdata:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER:-admin_audit} -d ${KEYCLOAK_DB_NAME:-keycloak} -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -U admin_audit -d keycloak -h 127.0.0.1 -p 5432"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -106,15 +104,15 @@ services:
 
     environment:
       # Admin console credentials (bootstrap)
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin_audit}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin123}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin_audit
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin123
 
-      # DB connection (must match keycloak-db env above)
+      # DB connection
       KC_DB: postgres
       KC_DB_URL_HOST: keycloak-db
-      KC_DB_URL_DATABASE: ${KEYCLOAK_DB_NAME:-keycloak}
-      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-admin_audit}
-      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-admin123}
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: admin_audit
+      KC_DB_PASSWORD: admin123
 
       # Health endpoints
       KC_HEALTH_ENABLED: "true"
@@ -123,12 +121,13 @@ services:
       KC_LOG: "console,file"
       KC_LOG_FILE: "/opt/keycloak/data/log/keycloak.log"
 
-    command: ["start-dev"]
+    # Import realm from /opt/keycloak/data/import (volume)
+    command: ["start-dev", "--import-realm"]
 
     volumes:
       - keycloak_logs:/opt/keycloak/data/log
+      - keycloak_import:/opt/keycloak/data/import
 
-    # Healthcheck senza curl
     healthcheck:
       test: ["CMD-SHELL", "(echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1 || exit 1"]
       interval: 10s
@@ -143,6 +142,7 @@ volumes:
   iso_audit_pgdata:
   keycloak_pgdata:
   keycloak_logs:
+  keycloak_import:
 
 networks:
   iso-audit-net:
