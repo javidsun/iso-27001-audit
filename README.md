@@ -12,3 +12,11 @@
 
 ## Notes
 - Do not commit `.env`
+
+## example di utility of loger 
+```python
+from iso_27001_audit.logger.audit import AuditLogger
+
+audit_log = AuditLogger(__name__)
+audit_log.audit_event(action="USER_LOGIN", subject="user_id:123", details={"ip": "1.2.3.4"})
+```
