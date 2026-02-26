@@ -1,4 +1,4 @@
-from .base import BaseLogger
+from .logger_wrapper import BaseLogger
 
 
 class AppLogger(BaseLogger):
