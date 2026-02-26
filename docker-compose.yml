@@ -1,14 +1,10 @@
-version: "3.9"
-
 services:
-
   # ==========================================================
-  # PostgreSQL Database
+  # PostgreSQL Database (ISO AUDIT)
   # ==========================================================
   iso-audit-db:
     container_name: iso-audit-db
     image: postgres:16-alpine
-
     restart: unless-stopped
 
     environment:
@@ -17,31 +13,38 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
 
     ports:
-      - "5433:5432"   # Host 5433 -> Container 5432
+      - "5433:5432"
 
     volumes:
       - iso_audit_pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iso_user -d iso_audit -h 127.0.0.1 -p 5432"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+    networks:
+      - iso-audit-net
 
   # ==========================================================
   # FastAPI Backend
   # ==========================================================
   iso-audit-backend:
     container_name: iso-audit-backend
-
     build:
       context: .
       dockerfile: Dockerfile
 
     depends_on:
-      - iso-audit-db
+      iso-audit-db:
+        condition: service_healthy
 
     ports:
       - "8003:8003"
 
     environment:
       APP_ENV: dev
-
-      # Database connection settings
       DB_HOST: iso-audit-db
       DB_PORT: 5432
       DB_NAME: iso_audit
@@ -49,5 +52,98 @@ services:
 
     restart: unless-stopped
 
+    # Healthcheck (versionato) — cambia URL se la tua route è diversa
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8003/api/v1/health >/dev/null || exit 1"]
+      interval: 100s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+    networks:
+      - iso-audit-net
+
+  # ==========================================================
+  # Keycloak DB (SEPARATO)
+  # ==========================================================
+  keycloak-db:
+    container_name: iso-audit-keycloak-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+
+    # IMPORTANT: deve combaciare con KC_DB_USERNAME/KC_DB_PASSWORD
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-admin_audit}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-admin123}
+
+    volumes:
+      - keycloak_pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER:-admin_audit} -d ${KEYCLOAK_DB_NAME:-keycloak} -h 127.0.0.1 -p 5432"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+    networks:
+      - iso-audit-net
+
+  # ==========================================================
+  # Keycloak
+  # ==========================================================
+  keycloak:
+    container_name: iso-audit-keycloak
+    image: quay.io/keycloak/keycloak:26.5.2
+    restart: unless-stopped
+
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+    ports:
+      - "127.0.0.1:9000:8080"
+
+    environment:
+      # Admin console credentials (bootstrap)
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin_audit}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin123}
+
+      # DB connection (must match keycloak-db env above)
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-db
+      KC_DB_URL_DATABASE: ${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-admin_audit}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-admin123}
+
+      # Health endpoints
+      KC_HEALTH_ENABLED: "true"
+
+      # Logging
+      KC_LOG: "console,file"
+      KC_LOG_FILE: "/opt/keycloak/data/log/keycloak.log"
+
+    command: ["start-dev"]
+
+    volumes:
+      - keycloak_logs:/opt/keycloak/data/log
+
+    # Healthcheck senza curl
+    healthcheck:
+      test: ["CMD-SHELL", "(echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+    networks:
+      - iso-audit-net
+
 volumes:
   iso_audit_pgdata:
+  keycloak_pgdata:
+  keycloak_logs:
+
+networks:
+  iso-audit-net:
+    driver: bridge
