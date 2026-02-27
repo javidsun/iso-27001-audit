@@ -1,0 +1,45 @@
+{
+  "realm": "iso-audit",
+  "enabled": true,
+  "displayName": "ISO-27001 Audit (Dev)",
+
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "minimumQuickLoginWaitSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 28800,
+
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername and passwordHistory(5)",
+
+  "clients": [
+    {
+      "clientId": "iso-audit-api",
+      "name": "ISO Audit API",
+      "enabled": true,
+
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+
+      "redirectUris": ["http://localhost:*/*"],
+      "webOrigins": ["+"]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "javid",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "Javid123!", "temporary": false }
+      ]
+    }
+  ]
+}
