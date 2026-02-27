@@ -23,23 +23,32 @@
       "name": "ISO Audit API",
       "enabled": true,
 
+      "protocol": "openid-connect",
+
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
 
       "redirectUris": ["http://localhost:*/*"],
-      "webOrigins": ["+"]
+      "webOrigins": ["+"],
+
+      "defaultClientScopes": ["openid", "profile", "email", "roles", "web-origins"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
     }
   ],
 
   "users": [
-    {
-      "username": "javid",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        { "type": "password", "value": "Javid123!", "temporary": false }
-      ]
-    }
-  ]
+  {
+    "username": "javid",
+    "enabled": true,
+    "emailVerified": true,
+    "email": "javid@example.com",
+    "firstName": "Javid",
+    "lastName": "Shamsi",
+    "requiredActions": [],
+    "credentials": [
+      { "type": "password", "value": "Admin@@00000", "temporary": false }
+    ]
+  }
+]
 }

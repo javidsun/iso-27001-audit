@@ -2,13 +2,17 @@
   "realm": "iso-audit",
   "enabled": true,
   "users": [
-    {
-      "username": "javid",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        { "type": "password", "value": "Javid123!", "temporary": false }
-      ]
-    }
-  ]
+  {
+    "username": "javid",
+    "enabled": true,
+    "emailVerified": true,
+    "email": "javid@example.com",
+    "firstName": "Javid",
+    "lastName": "Shamsi",
+    "requiredActions": [],
+    "credentials": [
+      { "type": "password", "value": "Admin@@00000", "temporary": false }
+    ]
+  }
+]
 }
