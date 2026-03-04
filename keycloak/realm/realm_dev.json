@@ -26,14 +26,15 @@
       "protocol": "openid-connect",
 
       "publicClient": true,
-      "standardFlowEnabled": true,
+
+      "standardFlowEnabled": false,
       "directAccessGrantsEnabled": true,
 
       "redirectUris": ["http://localhost:*/*"],
       "webOrigins": ["+"],
 
       "defaultClientScopes": ["openid", "profile", "email", "roles", "web-origins"],
-      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
+      "optionalClientScopes": ["offline_access"]
     }
   ],
 
