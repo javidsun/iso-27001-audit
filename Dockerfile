@@ -1,64 +1,54 @@
 # ==========================================================
 # ISO-27001-AUDIT - Backend container (Python 3.13)
-# - Installs dependencies from pyproject.toml ONLY
+# - Installs dependencies from pyproject.toml (PEP 621)
+# - Uses layer caching properly (fast rebuilds)
 # - Runs FastAPI via uvicorn
 # ==========================================================
 
 FROM python:3.13-slim
 
-# ------------------------------
-# Metadata
-# ------------------------------
 LABEL maintainer="javidshams"
 LABEL project="iso-27001-audit"
 
-# ------------------------------
-# Python runtime behavior
-# - no .pyc files
-# - unbuffered logs (better for Docker logs)
-# ------------------------------
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# ------------------------------
-# Workdir inside container
-# ------------------------------
 WORKDIR /app
 
-# ------------------------------
-# System deps (keep minimal)
-# build-essential: needed only if some deps compile native code
-# curl: useful for debugging/health checks
-# ------------------------------
+# Minimal system deps:
+# - curl: debug / healthcheck
+# - ca-certificates: TLS
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential curl \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# ------------------------------
-# Copy project files
-# We copy everything because `pip install .` needs:
-# - pyproject.toml
-# - src/ package
-# ------------------------------
+# Upgrade pip
+RUN pip install --no-cache-dir -U pip
+
+# --------------------------------
+# COPY ONLY metadata first (cache)
+# --------------------------------
+COPY pyproject.toml /app/pyproject.toml
+
+# If you have any packaging files, copy them too.
+# (Safe even if you don't have them; but Docker will fail if missing.)
+# So only include what exists in your repo:
+# COPY README.md /app/README.md
+
+# Copy src layout (needed for editable install fallback scenarios)
+COPY src /app/src
+
+# Install runtime deps (project dependencies)
+# We install the project in editable mode to avoid reinstalling on code changes
+RUN pip install --no-cache-dir -e .
+
+# --------------------------------
+# Now copy the rest (app code, tests excluded if you use .dockerignore)
+# --------------------------------
+# If you want tests inside backend container, keep this copy.
+# Otherwise add tests/ to .dockerignore
 COPY . /app
 
-# ------------------------------
-# Install dependencies declared in pyproject.toml
-# This is the key: you do NOT list fastapi/uvicorn here.
-# ------------------------------
-RUN pip install --upgrade pip \
-  && pip install .
-
-# ------------------------------
-# Expose internal port
-# ------------------------------
 EXPOSE 8003
-
-# ------------------------------
-# Start FastAPI
-# IMPORTANT:
-# - Requires: src/iso_27001_audit/main.py
-# - Requires: variable `app = FastAPI(...)` inside that file
-# ------------------------------
 
 CMD ["uvicorn", "iso_27001_audit.main:app", "--host", "0.0.0.0", "--port", "8003"]

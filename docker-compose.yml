@@ -6,59 +6,19 @@ services:
     container_name: iso-audit-db
     image: postgres:16-alpine
     restart: unless-stopped
-
     environment:
       POSTGRES_USER: iso_user
       POSTGRES_DB: iso_audit
       POSTGRES_HOST_AUTH_METHOD: trust
-
     ports:
       - "5433:5432"
-
     volumes:
       - iso_audit_pgdata:/var/lib/postgresql/data
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U iso_user -d iso_audit -h 127.0.0.1 -p 5432"]
       interval: 5s
       timeout: 3s
       retries: 20
-
-    networks:
-      - iso-audit-net
-
-  # ==========================================================
-  # FastAPI Backend
-  # ==========================================================
-  iso-audit-backend:
-    container_name: iso-audit-backend
-    build:
-      context: .
-      dockerfile: Dockerfile
-
-    depends_on:
-      iso-audit-db:
-        condition: service_healthy
-
-    ports:
-      - "8003:8003"
-
-    environment:
-      APP_ENV: dev
-      DB_HOST: iso-audit-db
-      DB_PORT: 5432
-      DB_NAME: iso_audit
-      DB_USER: iso_user
-
-    restart: unless-stopped
-
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8003/api/v1/health >/dev/null || exit 1"]
-      interval: 100s
-      timeout: 5s
-      retries: 20
-      start_period: 10s
-
     networks:
       - iso-audit-net
 
@@ -69,39 +29,34 @@ services:
     container_name: iso-audit-keycloak-db
     image: postgres:16-alpine
     restart: unless-stopped
-
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: admin_audit
       POSTGRES_PASSWORD: admin123
-
     volumes:
       - keycloak_pgdata:/var/lib/postgresql/data
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin_audit -d keycloak -h 127.0.0.1 -p 5432"]
       interval: 5s
       timeout: 3s
       retries: 20
-
     networks:
       - iso-audit-net
 
   # ==========================================================
-  # Keycloak (NO custom build) + realm import via volume
+  # Keycloak (realm import via bind mount)
+  # Host UI: http://localhost:9000
+  # Docker network: http://keycloak:8080
   # ==========================================================
   keycloak:
     container_name: iso-audit-keycloak
     image: quay.io/keycloak/keycloak:26.5.2
     restart: unless-stopped
-
     depends_on:
       keycloak-db:
         condition: service_healthy
-
     ports:
       - "127.0.0.1:9000:8080"
-
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin_audit
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin123
@@ -113,28 +68,57 @@ services:
       KC_DB_PASSWORD: admin123
 
       KC_HEALTH_ENABLED: "true"
-
-      # IMPORTANT: evita file log su path non scrivibile (ti dava permission denied)
       KC_LOG: "console"
-
     command: ["start-dev", "--import-realm"]
-
     volumes:
-      - keycloak_logs:/opt/keycloak/data/log
       - ./keycloak/realm/realm_dev.json:/opt/keycloak/data/import/realm_dev.json:ro
-
     healthcheck:
-      test: ["CMD-SHELL", "(echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "bash -lc ': </dev/tcp/127.0.0.1/8080'"]
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 30s
-
+      start_period: 40s
     networks:
       - iso-audit-net
 
   # ==========================================================
-  # Toolbox (curl) - best practice per debug/health checks
+  # FastAPI Backend
+  # ==========================================================
+  iso-audit-backend:
+    container_name: iso-audit-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      iso-audit-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    environment:
+      APP_ENV: dev
+      DB_HOST: iso-audit-db
+      DB_PORT: 5432
+      DB_NAME: iso_audit
+      DB_USER: iso_user
+
+      # JWT validation (dentro docker network)
+      KEYCLOAK_ISSUER: "http://keycloak:8080/realms/iso-audit"
+      KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/iso-audit/protocol/openid-connect/certs"
+      JWT_EXPECTED_AUDIENCE: "iso-audit-api"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8003/api/v1/health >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - iso-audit-net
+
+  # ==========================================================
+  # Toolbox (curl)
   # ==========================================================
   toolbox:
     container_name: iso-audit-toolbox
@@ -144,11 +128,29 @@ services:
     networks:
       - iso-audit-net
 
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile_tests
+    container_name: iso-audit-tests
+    depends_on:
+      iso-audit-backend:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    environment:
+      BACKEND_BASE: "http://iso-audit-backend:8003"
+      KEYCLOAK_BASE: "http://keycloak:8080"
+      KEYCLOAK_REALM: "iso-audit"
+      KEYCLOAK_CLIENT_ID: "iso-audit-api"
+      KEYCLOAK_USERNAME: "javid"
+      KEYCLOAK_PASSWORD: "Admin@@00000"
+    networks:
+      - iso-audit-net
+
 volumes:
   iso_audit_pgdata:
   keycloak_pgdata:
-  keycloak_logs:
-  keycloak_import:
 
 networks:
   iso-audit-net:

@@ -1,0 +1,28 @@
+# ==========================================================
+# ISO-27001-AUDIT - Tests container
+# - Installs ONLY test deps (.[test]) + project
+# - Runs pytest integration
+# ==========================================================
+
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir -U pip
+
+# Copy only what is needed for install + tests (cache-friendly)
+COPY pyproject.toml /app/pyproject.toml
+COPY src /app/src
+COPY tests /app/tests
+
+# Install project + test extras ONLY
+RUN pip install --no-cache-dir -e ".[test]"
+
+CMD ["python", "-m", "pytest", "tests/integration", "-v"]
