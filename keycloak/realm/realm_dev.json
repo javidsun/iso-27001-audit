@@ -17,12 +17,22 @@
 
   "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername and passwordHistory(5)",
 
+  "roles": {
+    "client": {
+      "iso-audit-api": [
+        { "name": "system", "description": "System super admin (cross-org)" },
+        { "name": "org_admin", "description": "Organization admin" },
+        { "name": "editor", "description": "Can create/update within org" },
+        { "name": "viewer", "description": "Read-only within org" }
+      ]
+    }
+  },
+
   "clients": [
     {
       "clientId": "iso-audit-api",
       "name": "ISO Audit API",
       "enabled": true,
-
       "protocol": "openid-connect",
 
       "publicClient": true,
@@ -39,17 +49,20 @@
   ],
 
   "users": [
-  {
-    "username": "javid",
-    "enabled": true,
-    "emailVerified": true,
-    "email": "javid@example.com",
-    "firstName": "Javid",
-    "lastName": "Shamsi",
-    "requiredActions": [],
-    "credentials": [
-      { "type": "password", "value": "Admin@@00000", "temporary": false }
-    ]
-  }
-]
+    {
+      "username": "javid",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "javid@example.com",
+      "firstName": "Javid",
+      "lastName": "Shamsi",
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "Admin@@00000", "temporary": false }
+      ],
+      "clientRoles": {
+        "iso-audit-api": ["system"]
+      }
+    }
+  ]
 }
