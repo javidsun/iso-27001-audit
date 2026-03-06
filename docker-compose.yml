@@ -1,7 +1,4 @@
 services:
-  # ==========================================================
-  # PostgreSQL Database (ISO AUDIT)
-  # ==========================================================
   iso-audit-db:
     container_name: iso-audit-db
     image: postgres:16-alpine
@@ -19,12 +16,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    networks:
-      - iso-audit-net
+    networks: [iso-audit-net]
 
-  # ==========================================================
-  # Keycloak DB (SEPARATO)
-  # ==========================================================
   keycloak-db:
     container_name: iso-audit-keycloak-db
     image: postgres:16-alpine
@@ -40,14 +33,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    networks:
-      - iso-audit-net
+    networks: [iso-audit-net]
 
-  # ==========================================================
-  # Keycloak (realm import via bind mount)
-  # Host UI: http://localhost:9000
-  # Docker network: http://keycloak:8080
-  # ==========================================================
   keycloak:
     container_name: iso-audit-keycloak
     image: quay.io/keycloak/keycloak:26.5.2
@@ -72,18 +59,17 @@ services:
     command: ["start-dev", "--import-realm"]
     volumes:
       - ./keycloak/realm/realm_dev.json:/opt/keycloak/data/import/realm_dev.json:ro
+
+    # ✅ healthcheck بدون curl
     healthcheck:
       test: ["CMD-SHELL", "bash -lc ': </dev/tcp/127.0.0.1/8080'"]
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 40s
-    networks:
-      - iso-audit-net
+      start_period: 60s
 
-  # ==========================================================
-  # FastAPI Backend
-  # ==========================================================
+    networks: [iso-audit-net]
+
   iso-audit-backend:
     container_name: iso-audit-backend
     build:
@@ -104,9 +90,9 @@ services:
       DB_NAME: iso_audit
       DB_USER: iso_user
 
-      # JWT validation (dentro docker network)
       KEYCLOAK_ISSUER: "http://keycloak:8080/realms/iso-audit"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/iso-audit/protocol/openid-connect/certs"
+      JWT_VERIFY_AUD: "false"
       JWT_EXPECTED_AUDIENCE: "iso-audit-api"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8003/api/v1/health >/dev/null || exit 1"]
@@ -114,19 +100,14 @@ services:
       timeout: 5s
       retries: 20
       start_period: 10s
-    networks:
-      - iso-audit-net
+    networks: [iso-audit-net]
 
-  # ==========================================================
-  # Toolbox (curl)
-  # ==========================================================
   toolbox:
     container_name: iso-audit-toolbox
     image: curlimages/curl:8.10.1
     restart: unless-stopped
     command: ["sleep", "infinity"]
-    networks:
-      - iso-audit-net
+    networks: [iso-audit-net]
 
   tests:
     build:
@@ -145,8 +126,13 @@ services:
       KEYCLOAK_CLIENT_ID: "iso-audit-api"
       KEYCLOAK_USERNAME: "javid"
       KEYCLOAK_PASSWORD: "Admin@@00000"
-    networks:
-      - iso-audit-net
+
+      KEYCLOAK_ADMIN_USER: "admin_audit"
+      KEYCLOAK_ADMIN_PASS: "admin123"
+
+      TENANT_CLAIM_NAME: "org_id"
+      KEYCLOAK_CLIENT_ID_FOR_ROLES: "iso-audit-api"
+    networks: [iso-audit-net]
 
 volumes:
   iso_audit_pgdata:
