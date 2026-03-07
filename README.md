@@ -68,3 +68,11 @@ app.add_middleware(
 # routes
 app.include_router(v1_router, prefix="/api/v1")
 ```
+## keycloak db docker access 
+```bash
+   docker exec -it iso-audit-keycloak-db psql -U admin_audit -d keycloak
+```
+
+```bash
+   docker exec -it iso-audit-db psql -U iso_user -d iso_audit           
+```
