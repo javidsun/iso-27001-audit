@@ -89,18 +89,25 @@ services:
       DB_PORT: 5432
       DB_NAME: iso_audit
       DB_USER: iso_user
+      DB_PASSWORD: ""
 
       KEYCLOAK_ISSUER: "http://keycloak:8080/realms/iso-audit"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/iso-audit/protocol/openid-connect/certs"
       JWT_VERIFY_AUD: "false"
       JWT_EXPECTED_AUDIENCE: "iso-audit-api"
+
+      KEYCLOAK_CLIENT_ID: "iso-audit-api"
+      TENANT_GROUPS_CLAIM: "groups"
+      TENANT_GROUP_PREFIX: "/org-"
+
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8003/api/v1/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 20
       start_period: 10s
-    networks: [iso-audit-net]
+    networks:
+      - iso-audit-net
 
   toolbox:
     container_name: iso-audit-toolbox

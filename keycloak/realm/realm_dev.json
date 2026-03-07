@@ -1,7 +1,7 @@
 {
   "realm": "iso-audit",
   "enabled": true,
-  "displayName": "ISO-27001 Audit (Dev)",
+  "displayName": "ISO Audit (Dev)",
 
   "bruteForceProtected": true,
   "failureFactor": 5,
@@ -28,6 +28,13 @@
     }
   },
 
+  "groups": [
+    {
+      "name": "org-javid",
+      "path": "/org-javid"
+    }
+  ],
+
   "clients": [
     {
       "clientId": "iso-audit-api",
@@ -36,15 +43,33 @@
       "protocol": "openid-connect",
 
       "publicClient": true,
-
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
 
       "redirectUris": ["http://localhost:*/*"],
       "webOrigins": ["+"],
 
-      "defaultClientScopes": ["openid", "profile", "email", "roles", "web-origins"],
-      "optionalClientScopes": ["offline_access"]
+      "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
+      "optionalClientScopes": ["offline_access"],
+
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "true",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false",
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        }
+      ]
     }
   ],
 
@@ -58,11 +83,16 @@
       "lastName": "Shamsi",
       "requiredActions": [],
       "credentials": [
-        { "type": "password", "value": "Admin@@00000", "temporary": false }
+        {
+          "type": "password",
+          "value": "Admin@@00000",
+          "temporary": false
+        }
       ],
       "clientRoles": {
         "iso-audit-api": ["system"]
-      }
+      },
+      "groups": ["/org-javid"]
     }
   ]
 }
